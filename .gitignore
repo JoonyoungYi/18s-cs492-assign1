@@ -106,3 +106,6 @@ venv.bak/
 #
 logs/
 MNIST-data/
+PA1-data/
+model/
+20110727.npy
