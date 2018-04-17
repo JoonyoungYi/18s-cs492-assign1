@@ -26,7 +26,7 @@ def init_models():
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     # optimizer = tf.train.AdamOptimizer(learning_rate)
     # optimizer = tf.train.RMSPropOptimizer(learning_rate)
-    optimizer = tf.train.MomentumOptimizer(learning_rate, 0.5)
+    optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
     train_op = optimizer.minimize(loss)
 
     pred = tf.argmax(output_layer, axis=1, output_type=tf.int32)

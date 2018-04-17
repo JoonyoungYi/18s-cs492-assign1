@@ -105,7 +105,7 @@ def _get_msg_from_result(result):
 
 
 def _logging_hook(sess, i, result, models):
-    msg = 'STEP %6d' % i
+    msg = '\STEP %8s' % ("{:,}".format(i))
     msg += '(%.2fsec)' % ((time.time() - timestamp))
     msg += ' - TRAIN: '
     msg += _get_msg_from_result(result)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
             break
 
     test_x, test_y = _get_test_set()
-    msg = '\nTEST %6d' % i
+    msg = '\nTEST %8s' % ("{:,}".format(i))
     msg += '(%.2fsec): ' % ((time.time() - timestamp))
     msg += ' - TRAIN: '
     msg += _get_msg_from_result(result)
