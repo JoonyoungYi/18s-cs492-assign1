@@ -13,6 +13,37 @@ pa1_dataset = None
 timestamp = None
 start_timestamp = time.time()
 
+# QUESTION: rotate 90도씩 해서 트레이닝에 활용하고 있는데, 이렇게 해도 괜찮은지?
+
+
+def __debug_save_image(array, name):
+    from PIL import Image
+
+    img = Image.new('RGB', (28, 28))
+    img.putdata([(int(i * 255), int(i * 255), int(i * 255)) for i in array])
+    img.save('{}.png'.format(name))
+
+
+def _get_rotated_matrix(matrix, k):
+    assert k >= 1 and k < 4
+    i_matrix = np.transpose(matrix[:, :INPUT_LAYER_SIZE])
+    i_matrix = i_matrix.reshape(IMAGE_SIZE, IMAGE_SIZE, -1)
+    i_matrix = np.rot90(i_matrix, k=k)
+    i_matrix = i_matrix.reshape(INPUT_LAYER_SIZE, -1)
+    i_matrix = np.transpose(i_matrix)
+    r_matrix = np.concatenate((i_matrix, matrix[:, INPUT_LAYER_SIZE:]), axis=1)
+    # __debug_save_image(matrix[1, :INPUT_LAYER_SIZE], 'original')
+    # __debug_save_image(r_matrix[1, :INPUT_LAYER_SIZE], 'new')
+    return r_matrix
+
+
+def _rotation_train_data(_matrix):
+    # i_matrix : image matrix, r_matrix : rotated matrix
+    matrix = _matrix[:, :]
+    for k in range(3, 4):
+        matrix = np.concatenate((matrix, _get_rotated_matrix(_matrix, k=k)))
+    return _matrix
+
 
 def _init_dataset():
     global mnist
@@ -22,17 +53,20 @@ def _init_dataset():
     # mnist = tf.contrib.learn.datasets.load_dataset("mnist")
 
     pa1_dataset = {
-        'train': np.load('PA1-data/train.npy'),
+        'train': _rotation_train_data(np.load('PA1-data/train.npy')),
         'valid': np.load('PA1-data/valid.npy'),
         'test': np.load('PA1-data/test.npy')
     }
 
 
-def _get_batch_set():
+def _get_batch_set(i):
     # batch_x, batch_y = mnist.train.next_batch(batch_size)
 
-    batch_x = pa1_dataset['train'][:, :INPUT_LAYER_SIZE]
-    batch_y = pa1_dataset['train'][:, INPUT_LAYER_SIZE].astype(np.int32)
+    train = pa1_dataset['train']
+    idx = np.random.randint(train.shape[0], size=batch_size)
+    batch = train[idx, :]
+    batch_x = batch[:, :INPUT_LAYER_SIZE]
+    batch_y = batch[:, INPUT_LAYER_SIZE]
     return batch_x, batch_y
 
 
@@ -49,7 +83,10 @@ def _get_test_set():
     # x = mnist.test.images
     # y = mnist.test.labels
     # return x, y
-    return None, None
+
+    valid_x = pa1_dataset['valid'][:, :INPUT_LAYER_SIZE]
+    valid_y = pa1_dataset['valid'][:, INPUT_LAYER_SIZE].astype(np.int32)
+    return valid_x, valid_y
 
 
 def _get_validation_result_msg(sess, models, x, y):
@@ -65,7 +102,7 @@ def _get_validation_result_msg(sess, models, x, y):
 
 
 def _get_msg_from_result(result):
-    return 'acc=%.3f loss=%.3f' % (result['acc'], result['loss'])
+    return 'acc=%2.2f%% loss=%.4f' % (result['acc'] * 100, result['loss'])
 
 
 def _logging_hook(sess, i, result, models):
@@ -97,8 +134,9 @@ if __name__ == '__main__':
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
 
+    result = None
     for i in range(1, iter_num + 1):
-        batch_x, batch_y = _get_batch_set()
+        batch_x, batch_y = _get_batch_set(i)
 
         result = sess.run({
             'loss': models['loss'],
@@ -118,8 +156,10 @@ if __name__ == '__main__':
             break
 
     test_x, test_y = _get_test_set()
-    if test_x and test_y:
-        msg = '\nTEST %6d' % i
-        msg += '(%.2fsec): ' % ((time.time() - start_timestamp))
-        msg += _get_validation_result_msg(sess, models, test_x, test_y)
-        print(msg)
+    msg = '\nTEST %6d' % i
+    msg += '(%.2fsec): ' % ((time.time() - start_timestamp))
+    msg += ' - TRAIN: '
+    msg += _get_msg_from_result(result)
+    msg += ' - VALID(or TEST): '
+    msg += _get_validation_result_msg(sess, models, test_x, test_y)
+    print(msg)
