@@ -5,6 +5,9 @@
 * This repository is mainly forked from [KAIST CS492C course(Introduction to Deep Learning)](https://github.com/hyunwooj/KAIST-CS492C-Spring2018).
   * KAIST CS492C deep learning course tensorflow session.
 
+* Also, I used this [repository](https://github.com/golbin/TensorFlow-Tutorials)
+
+
 # Environment
 * Python 3.5 and TensorFlow 1.4
 ```
