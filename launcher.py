@@ -11,7 +11,6 @@ from model import init_models
 mnist = None
 pa1_dataset = None
 timestamp = None
-start_timestamp = time.time()
 
 # QUESTION: rotate 90도씩 해서 트레이닝에 활용하고 있는데, 이렇게 해도 괜찮은지?
 
@@ -42,7 +41,7 @@ def _rotation_train_data(_matrix):
     matrix = _matrix[:, :]
     for k in range(3, 4):
         matrix = np.concatenate((matrix, _get_rotated_matrix(_matrix, k=k)))
-    return _matrix
+    return matrix
 
 
 def _init_dataset():
@@ -106,8 +105,6 @@ def _get_msg_from_result(result):
 
 
 def _logging_hook(sess, i, result, models):
-    global timestamp
-
     msg = 'STEP %6d' % i
     msg += '(%.2fsec)' % ((time.time() - timestamp))
     msg += ' - TRAIN: '
@@ -117,8 +114,6 @@ def _logging_hook(sess, i, result, models):
     valid_x, valid_y = _get_validation_set()
     msg += _get_validation_result_msg(sess, models, valid_x, valid_y)
     print(msg)
-
-    timestamp = time.time()
 
 
 if __name__ == '__main__':
@@ -157,7 +152,7 @@ if __name__ == '__main__':
 
     test_x, test_y = _get_test_set()
     msg = '\nTEST %6d' % i
-    msg += '(%.2fsec): ' % ((time.time() - start_timestamp))
+    msg += '(%.2fsec): ' % ((time.time() - timestamp))
     msg += ' - TRAIN: '
     msg += _get_msg_from_result(result)
     msg += ' - VALID(or TEST): '
