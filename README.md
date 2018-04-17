@@ -15,3 +15,10 @@
     . .venv/bin/activate
     pip install -r requirements.txt
 ```
+
+
+# Run
+```
+    . .venv/bin/activate 
+    python launcher.py
+```
