@@ -9,38 +9,47 @@ from config import *
 from model import init_models
 
 mnist = None
-train_data, train_labels = None, None
+pa1_dataset = None
 timestamp = None
 start_timestamp = time.time()
 
 
 def _init_dataset():
-    # Download MNIST dataset
     global mnist
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    global pa1_dataset
 
-    # dataset_train = np.load('PA1-data/train.npy')
-    # global train_data, train_labels
-    # train_data = dataset_train[:, :INPUT_LAYER_SIZE]
-    # train_labels = dataset_train[:, INPUT_LAYER_SIZE].astype(np.int32)
+    # Download MNIST dataset
+    # mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+
+    pa1_dataset = {
+        'train': np.load('PA1-data/train.npy'),
+        'valid': np.load('PA1-data/valid.npy'),
+        'test': np.load('PA1-data/test.npy')
+    }
 
 
 def _get_batch_set():
-    batch_x, batch_y = mnist.train.next_batch(batch_size)
-    # batch_x, batch_y = train_data, train_labels
+    # batch_x, batch_y = mnist.train.next_batch(batch_size)
+
+    batch_x = pa1_dataset['train'][:, :INPUT_LAYER_SIZE]
+    batch_y = pa1_dataset['train'][:, INPUT_LAYER_SIZE].astype(np.int32)
     return batch_x, batch_y
 
 
 def _get_validation_set():
-    valid_x = mnist.validation.images
-    valid_y = mnist.validation.labels
+    # valid_x = mnist.validation.images
+    # valid_y = mnist.validation.labels
+
+    valid_x = pa1_dataset['valid'][:, :INPUT_LAYER_SIZE]
+    valid_y = pa1_dataset['valid'][:, INPUT_LAYER_SIZE].astype(np.int32)
     return valid_x, valid_y
 
 
 def _get_test_set():
-    x = mnist.test.images
-    y = mnist.test.labels
-    return x, y
+    # x = mnist.test.images
+    # y = mnist.test.labels
+    # return x, y
+    return None, None
 
 
 def _get_validation_result_msg(sess, models, x, y):
@@ -109,7 +118,8 @@ if __name__ == '__main__':
             break
 
     test_x, test_y = _get_test_set()
-    msg = '\nTEST %6d' % i
-    msg += '(%.2fsec): ' % ((time.time() - start_timestamp))
-    msg += _get_validation_result_msg(sess, models, test_x, test_y)
-    print(msg)
+    if test_x and test_y:
+        msg = '\nTEST %6d' % i
+        msg += '(%.2fsec): ' % ((time.time() - start_timestamp))
+        msg += _get_validation_result_msg(sess, models, test_x, test_y)
+        print(msg)
