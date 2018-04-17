@@ -23,7 +23,10 @@ def init_models():
     output_layer = tf.layers.dense(hidden_layers[-1], OUTPUT_LAYER_SIZE)
 
     loss = tf.losses.sparse_softmax_cross_entropy(y, output_layer)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+    # optimizer = tf.train.AdamOptimizer(learning_rate)
+    # optimizer = tf.train.RMSPropOptimizer(learning_rate)
+    optimizer = tf.train.MomentumOptimizer(learning_rate, 0.5)
     train_op = optimizer.minimize(loss)
 
     pred = tf.argmax(output_layer, axis=1, output_type=tf.int32)
