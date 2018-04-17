@@ -3,28 +3,40 @@ import numpy as np
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
+num_epochs = 100
+output_layer_size = 10
+hidden_layer_size = 28 * 28
+hidden_layer_number = 6
+learning_rate = 0.1
+batch_size = 100
+steps = 10000
+
 
 def custom_model_fn(features, labels, mode):
     """Model function for PA1"""
-
     # Write your custom layer
-
     # Input Layer
-    # input_layer = tf.reshape(
-    #     features["x"], [-1, 28, 28, 1])  # You also can use 1 x 784 vector
+    # You also can use 1 x 784 vector
+    # input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
     input_layer = features["x"]
 
-    hidden_layer_size = 100
-    learning_rate = 0.1
-    # ....
-    # ....
-    # ....
-    # ....
-    hidden = tf.layers.dense(
-        input_layer, hidden_layer_size, activation=tf.nn.relu)
+    hidden_layers = [
+        tf.layers.dense(
+            input_layer,
+            hidden_layer_size,
+            activation=tf.nn.relu,
+            use_bias=True)
+    ]
+    for i in range(1, hidden_layer_number):
+        hidden_layers.append(
+            tf.layers.dense(
+                hidden_layers[i - 1],
+                hidden_layer_size,
+                activation=tf.nn.relu,
+                use_bias=True))
 
     # Output logits Layer
-    logits = tf.layers.dense(hidden, 10)
+    logits = tf.layers.dense(hidden_layers[-1], output_layer_size)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -41,25 +53,28 @@ def custom_model_fn(features, labels, mode):
     # Select your loss and optimizer from tensorflow API
     # Calculate Loss (for both TRAIN and EVAL modes)
     # loss = tf.losses."custom loss function" # Refer to tf.losses
-
     loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
         # optimizer = tf.train."custom optimizer" # Refer to tf.train
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+
+        # optimizer = tf.train.RMSPropOptimizer(learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate)
+
         train_op = optimizer.minimize(
             loss=loss, global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(
             mode=mode, loss=loss, train_op=train_op)
-
-    # Add evaluation metrics (for EVAL mode)
-    eval_metric_ops = {
-        "accuracy":
-        tf.metrics.accuracy(labels=labels, predictions=predictions["classes"])
-    }
-    return tf.estimator.EstimatorSpec(
-        mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
+    else:
+        # Add evaluation metrics (for EVAL mode)
+        eval_metric_ops = {
+            "accuracy":
+            tf.metrics.accuracy(
+                labels=labels, predictions=predictions["classes"])
+        }
+        return tf.estimator.EstimatorSpec(
+            mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 
 if __name__ == '__main__':
@@ -69,16 +84,32 @@ if __name__ == '__main__':
     test_data = np.load('PA1-data/test.npy')
 
     train_data = dataset_train[:, :784]
+    # import random
+    # f = random.randint(1, 10000)
+    # for i in range(28):
+    #     row = train_data[f, i * 28:(i + 1) * 28]
+    #     print(''.join('■' if c > 0.67 else ('□' if c > 0.33 else ' ')
+    #                   for c in row) + '|')
+    # print(dataset_train[f, 784])
+    #
+    # from PIL import Image
+    #
+    # img = Image.new('RGB', (28, 28))
+    # img.putdata([(int(i * 255), int(i * 255), int(i * 255)) for i in train_data[f, :]])
+    # img.save('test.png')
+
+    # assert False
     train_labels = dataset_train[:, 784].astype(np.int32)
     eval_data = dataset_eval[:, :784]
     eval_labels = dataset_eval[:, 784].astype(np.int32)
 
     # Save model and checkpoint
     classifier = tf.estimator.Estimator(
-        model_fn=custom_model_fn, model_dir="./model")
+        model_fn=custom_model_fn, model_dir="./PA1-model")
 
     # Set up logging for predictions
-    tensors_to_log = {"probabilities": "softmax_tensor"}
+    # tensors_to_log = {"probabilities": "softmax_tensor"}
+    tensors_to_log = {}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
 
@@ -86,10 +117,10 @@ if __name__ == '__main__':
     train_input = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
-        batch_size=100,
-        num_epochs=None,
+        batch_size=batch_size,
+        num_epochs=num_epochs,
         shuffle=True)
-    classifier.train(input_fn=train_input, steps=20000, hooks=[logging_hook])
+    classifier.train(input_fn=train_input, steps=steps, hooks=[logging_hook])
 
     # Eval the model. You can evaluate your trained model with validation data
     eval_input = tf.estimator.inputs.numpy_input_fn(
@@ -101,6 +132,8 @@ if __name__ == '__main__':
     pred_input = tf.estimator.inputs.numpy_input_fn(
         x={"x": test_data}, shuffle=False)
     pred_results = classifier.predict(input_fn=pred_input)
+    # print(list(pred_results))
+    print(type(list(pred_results)))
     result = np.asarray([x.values()[1] for x in list(pred_results)])
     ## ----------------------------------------- ##
 
