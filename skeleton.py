@@ -1,7 +1,10 @@
+import os
+
 import tensorflow as tf
 import numpy as np
 
-# tf.logging.set_verbosity(tf.logging.INFO)
+tf.logging.set_verbosity(tf.logging.FATAL)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 num_epochs = 100
 output_layer_size = 10
