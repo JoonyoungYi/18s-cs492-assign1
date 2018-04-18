@@ -4,9 +4,12 @@ OUTPUT_LAYER_SIZE = 10
 
 hidden_layer_size = 100
 hidden_layer_number = 6
-
+DROPOUT_RATE = 0.5
 learning_rate = 0.01
-batch_size = 50
-iter_num = 1000000
-every_n_iter = 1000
-early_stop_loss = 0.001
+
+BATCH_SIZE = 400
+NUM_EPOCHS = 19
+STEPS = 5000000
+every_n_iter = 100
+EARLY_STOP_TRAIN_LOSS = 0.001
+EARLY_STOP_VALID_LOSS_MULTIPLIER = 1.5

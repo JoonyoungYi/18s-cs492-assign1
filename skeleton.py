@@ -1,15 +1,15 @@
 import tensorflow as tf
 import numpy as np
 
-tf.logging.set_verbosity(tf.logging.INFO)
+# tf.logging.set_verbosity(tf.logging.INFO)
 
 num_epochs = 100
 output_layer_size = 10
-hidden_layer_size = 28 * 28
+hidden_layer_size = 100
 hidden_layer_number = 6
-learning_rate = 0.1
+learning_rate = 0.01
 batch_size = 100
-steps = 10000
+steps = num_epochs * batch_size
 
 
 def custom_model_fn(features, labels, mode):
@@ -21,19 +21,13 @@ def custom_model_fn(features, labels, mode):
     input_layer = features["x"]
 
     hidden_layers = [
-        tf.layers.dense(
-            input_layer,
-            hidden_layer_size,
-            activation=tf.nn.relu,
-            use_bias=True)
+        tf.layers.dense(input_layer, hidden_layer_size, activation=tf.nn.relu)
     ]
     for i in range(1, hidden_layer_number):
         hidden_layers.append(
             tf.layers.dense(
-                hidden_layers[i - 1],
-                hidden_layer_size,
-                activation=tf.nn.relu,
-                use_bias=True))
+                hidden_layers[i - 1], hidden_layer_size,
+                activation=tf.nn.relu))
 
     # Output logits Layer
     logits = tf.layers.dense(hidden_layers[-1], output_layer_size)
@@ -54,25 +48,35 @@ def custom_model_fn(features, labels, mode):
     # Calculate Loss (for both TRAIN and EVAL modes)
     # loss = tf.losses."custom loss function" # Refer to tf.losses
     loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+    accuracy = tf.metrics.accuracy(
+        labels=labels, predictions=predictions["classes"])
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
         # optimizer = tf.train."custom optimizer" # Refer to tf.train
 
         # optimizer = tf.train.RMSPropOptimizer(learning_rate)
-        optimizer = tf.train.AdamOptimizer(learning_rate)
-
+        optimizer = tf.train.AdamOptimizer(learning_rate * 0.01)
+        eval_metric_ops = {"accuracy": accuracy}
         train_op = optimizer.minimize(
             loss=loss, global_step=tf.train.get_global_step())
+
+        pred = tf.argmax(logits, axis=1, output_type=tf.int32)
+        acc = tf.reduce_mean(tf.cast(tf.equal(pred, labels), tf.float32))
+        tensors_to_log = {"loss": loss, "accuracy": acc}
+        # tensors_to_log = {}
+        logging_hook = tf.train.LoggingTensorHook(
+            tensors=tensors_to_log, every_n_iter=100)
+
         return tf.estimator.EstimatorSpec(
-            mode=mode, loss=loss, train_op=train_op)
+            mode=mode,
+            loss=loss,
+            train_op=train_op,
+            eval_metric_ops=eval_metric_ops,
+            training_hooks=[logging_hook])
     else:
         # Add evaluation metrics (for EVAL mode)
-        eval_metric_ops = {
-            "accuracy":
-            tf.metrics.accuracy(
-                labels=labels, predictions=predictions["classes"])
-        }
+        eval_metric_ops = {"accuracy": accuracy}
         return tf.estimator.EstimatorSpec(
             mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
@@ -105,36 +109,36 @@ if __name__ == '__main__':
 
     # Save model and checkpoint
     classifier = tf.estimator.Estimator(
-        model_fn=custom_model_fn, model_dir="./PA1-model")
-
-    # Set up logging for predictions
-    # tensors_to_log = {"probabilities": "softmax_tensor"}
-    tensors_to_log = {}
-    logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log, every_n_iter=50)
+        model_fn=custom_model_fn, model_dir="./PA1-model-old")
 
     # Train the model. You can train your model with specific batch size and epoches
-    train_input = tf.estimator.inputs.numpy_input_fn(
-        x={"x": train_data},
-        y=train_labels,
-        batch_size=batch_size,
-        num_epochs=num_epochs,
-        shuffle=True)
-    classifier.train(input_fn=train_input, steps=steps, hooks=[logging_hook])
+    for i in range(100):
+        train_input = tf.estimator.inputs.numpy_input_fn(
+            x={"x": train_data},
+            y=train_labels,
+            batch_size=batch_size,
+            num_epochs=1,
+            shuffle=True)
+        classifier.train(input_fn=train_input, steps=steps)
+        train_results = classifier.evaluate(input_fn=train_input)
 
-    # Eval the model. You can evaluate your trained model with validation data
-    eval_input = tf.estimator.inputs.numpy_input_fn(
-        x={"x": eval_data}, y=eval_labels, num_epochs=1, shuffle=False)
-    eval_results = classifier.evaluate(input_fn=eval_input)
+        # Eval the model. You can evaluate your trained model with validation data
+        eval_input = tf.estimator.inputs.numpy_input_fn(
+            x={"x": eval_data}, y=eval_labels, num_epochs=1, shuffle=False)
+        eval_results = classifier.evaluate(input_fn=eval_input)
+        print('>>')
+        print(train_results)
+        print(eval_results)
 
     ## ----------- Do not modify!!! ------------ ##
     # Predict the test dataset
-    pred_input = tf.estimator.inputs.numpy_input_fn(
-        x={"x": test_data}, shuffle=False)
-    pred_results = classifier.predict(input_fn=pred_input)
-    # print(list(pred_results))
-    print(type(list(pred_results)))
-    result = np.asarray([x.values()[1] for x in list(pred_results)])
+    # pred_input = tf.estimator.inputs.numpy_input_fn(
+    #     x={"x": test_data}, shuffle=False)
+    # pred_results = classifier.predict(input_fn=pred_input)
+    # # print(list(pred_results))
+    # print(type(list(pred_results)))
+    # result = np.asarray([x.values()[1] for x in list(pred_results)])
     ## ----------------------------------------- ##
 
-    np.save('20110727.npy', result)
+    # np.save('20110727.npy', result)
+    print('Done!')
