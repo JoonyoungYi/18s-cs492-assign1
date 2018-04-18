@@ -12,15 +12,18 @@ def init_models():
     y = tf.placeholder(tf.int32, [None], 'y')
 
     hidden_layers = [
-        tf.layers.dense(x, hidden_layer_size, activation=_init_activation)
+        tf.layers.dense(
+            x, hidden_layer_size, activation=_init_activation, use_bias=True)
     ]
     for i in range(hidden_layer_number):
         hidden_layers.append(
             tf.layers.dense(
                 hidden_layers[-1],
                 hidden_layer_size,
-                activation=_init_activation))
-    output_layer = tf.layers.dense(hidden_layers[-1], OUTPUT_LAYER_SIZE)
+                activation=_init_activation,
+                use_bias=True))
+    output_layer = tf.layers.dense(
+        hidden_layers[-1], OUTPUT_LAYER_SIZE, use_bias=True)
 
     loss = tf.losses.sparse_softmax_cross_entropy(y, output_layer)
     # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
@@ -82,10 +85,8 @@ def fc_model_fn(features, labels, mode):
     # Calculate Loss (for both TRAIN and EVAL modes)
     # Also, prepare accuracy.
     loss = tf.losses.sparse_softmax_cross_entropy(labels, output_layer)
-    eval_metric_ops = {
-        "accuracy":
-        tf.metrics.accuracy(labels=labels, predictions=predictions["classes"])
-    }
+    accuracy = tf.metrics.accuracy(
+        labels=labels, predictions=predictions["classes"])
 
     # Setting Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -95,12 +96,16 @@ def fc_model_fn(features, labels, mode):
         optimizer = tf.train.AdamOptimizer(learning_rate * 0.01)
 
         train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step())
+            loss=loss, global_step=tf.train.get_global_step())
+
         return tf.estimator.EstimatorSpec(
-            mode=mode, loss=loss, train_op=train_op)
+            mode=mode,
+            loss=loss,
+            train_op=train_op,
+            eval_metric_ops={"accuracy": accuracy})
     else:
         # Setting evaluation metrics (for EVAL mode)
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
-            eval_metric_ops=eval_metric_ops, )
+            eval_metric_ops={"accuracy": accuracy}, )

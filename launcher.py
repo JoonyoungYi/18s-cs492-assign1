@@ -10,7 +10,11 @@ from config import *
 from model import init_models
 from model import fc_model_fn
 
-tf.logging.set_verbosity(tf.logging.INFO)
+tf.logging.set_verbosity(tf.logging.FATAL)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+if os.path.exists(MODEL_FOLDER_NAME):
+    shutil.rmtree(MODEL_FOLDER_NAME)
+
 mnist = None
 pa1_dataset = None
 timestamp = None
@@ -40,7 +44,7 @@ def _get_rotated_matrix(matrix, k):
 def _rotation_train_data(_matrix):
     # i_matrix : image matrix, r_matrix : rotated matrix
     matrix = _matrix[:, :]
-    for k in range(3, 4):
+    for k in range(1, 4):
         matrix = np.concatenate((matrix, _get_rotated_matrix(_matrix, k=k)))
     return matrix
 
@@ -55,7 +59,7 @@ def _flip_train_data(matrix):
 def _augment_train_data(_matrix):
     matrix = _rotation_train_data(_matrix)
     matrix = np.concatenate((matrix, _flip_train_data(matrix)))
-    return matrix
+    return _matrix
 
 
 def _init_dataset():
@@ -72,19 +76,18 @@ def _init_dataset():
     }
 
 
-def _get_batch_set(i=None):
+def _get_batch_set():
     # batch_x, batch_y = mnist.train.next_batch(batch_size)
 
     train = pa1_dataset['train']
-    # idx = np.random.randint(train.shape[0], size=batch_size)
-    # batch = train[idx, :]
-    batch = train
+    idx = np.random.randint(train.shape[0], size=BATCH_SIZE)
+    batch = train[idx, :]
     batch_x = batch[:, :INPUT_LAYER_SIZE]
     batch_x = np.minimum(
         np.ones(batch_x.shape),
         np.maximum(
             np.zeros(batch_x.shape),
-            np.add(batch_x, np.random.normal(0, 0.2, batch_x.shape))))
+            np.add(batch_x, np.random.normal(0, 0.2, batch_x.shape)))).astype(np.float32)
     batch_y = batch[:, INPUT_LAYER_SIZE].astype(np.int32)
     return batch_x, batch_y
 
@@ -174,31 +177,28 @@ if __name__ == '__main__':
 
     # Save model and checkpoint
     classifier = tf.estimator.Estimator(
-        model_fn=fc_model_fn, model_dir="./PA1-model")
+        model_fn=fc_model_fn, model_dir=MODEL_FOLDER_NAME)
 
-    x, y = _get_batch_set()
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={"x": x},
-        y=y,
-        batch_size=BATCH_SIZE,
-        num_epochs=1,
-        shuffle=True,
-        queue_capacity=80000,
-        num_threads=1)
-    train_results = classifier.train(
-        input_fn=train_input_fn, steps=STEPS, hooks=[])
-
-    # Eval the model. You can evaluate your trained model with validation data
-    x, y = _get_validation_set()
-    valid_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={"x": x},
-        y=y,
+    eval_x, eval_y = _get_validation_set()
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_x},
+        y=eval_y,
         num_epochs=1,
         shuffle=False, )
-    valid_results = classifier.evaluate(input_fn=valid_input_fn)
-    print(valid_results)
 
-    assert False
+    for i in range(1, TRAIN_ITER_NUMBER + 1):
+        x, y = _get_batch_set()
+        train_input_fn = tf.estimator.inputs.numpy_input_fn(
+            x={"x": x}, y=y, batch_size=BATCH_SIZE, num_epochs=1, shuffle=True)
+        classifier.train(input_fn=train_input_fn, steps=BATCH_SIZE)
+        train_results = classifier.evaluate(input_fn=train_input_fn)
+        print(train_results)
+        print(x.shape, y.shape)
+        # Eval the model. You can evaluate your trained model with validation data
+        # try:
+        eval_results = classifier.evaluate(input_fn=eval_input_fn)
+        print(eval_results)
+
     # result = None
     # try:
     #     for i in range(1, iter_num + 1):

@@ -64,19 +64,11 @@ def custom_model_fn(features, labels, mode):
         train_op = optimizer.minimize(
             loss=loss, global_step=tf.train.get_global_step())
 
-        pred = tf.argmax(logits, axis=1, output_type=tf.int32)
-        acc = tf.reduce_mean(tf.cast(tf.equal(pred, labels), tf.float32))
-        tensors_to_log = {"loss": loss, "accuracy": acc}
-        # tensors_to_log = {}
-        logging_hook = tf.train.LoggingTensorHook(
-            tensors=tensors_to_log, every_n_iter=100)
-
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
             train_op=train_op,
-            eval_metric_ops=eval_metric_ops,
-            training_hooks=[logging_hook])
+            eval_metric_ops=eval_metric_ops)
     else:
         # Add evaluation metrics (for EVAL mode)
         eval_metric_ops = {"accuracy": accuracy}
@@ -91,6 +83,8 @@ if __name__ == '__main__':
     test_data = np.load('PA1-data/test.npy')
 
     train_data = dataset_train[:, :784]
+    idx = np.random.randint(train_data.shape[0], size=400)
+    train_data = train_data[idx, :]
     # import random
     # f = random.randint(1, 10000)
     # for i in range(28):
@@ -107,8 +101,12 @@ if __name__ == '__main__':
 
     # assert False
     train_labels = dataset_train[:, 784].astype(np.int32)
+    train_labels = train_labels[idx]
+
     eval_data = dataset_eval[:, :784]
     eval_labels = dataset_eval[:, 784].astype(np.int32)
+    eval_input = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data}, y=eval_labels, num_epochs=1, shuffle=False)
 
     # Save model and checkpoint
     classifier = tf.estimator.Estimator(
@@ -116,18 +114,22 @@ if __name__ == '__main__':
 
     # Train the model. You can train your model with specific batch size and epoches
     for i in range(100):
+        print(train_data.shape, train_labels.shape)
+        x = np.minimum(
+            np.ones(train_data.shape),
+            np.maximum(
+                np.zeros(train_data.shape),
+                np.add(train_data, np.random.normal(0, 0.2, train_data.shape))))
         train_input = tf.estimator.inputs.numpy_input_fn(
-            x={"x": train_data},
+            x={"x": x},
             y=train_labels,
-            batch_size=batch_size,
+            batch_size=400,
             num_epochs=1,
             shuffle=True)
-        classifier.train(input_fn=train_input, steps=steps)
+        classifier.train(input_fn=train_input, steps=400)
         train_results = classifier.evaluate(input_fn=train_input)
 
         # Eval the model. You can evaluate your trained model with validation data
-        eval_input = tf.estimator.inputs.numpy_input_fn(
-            x={"x": eval_data}, y=eval_labels, num_epochs=1, shuffle=False)
         eval_results = classifier.evaluate(input_fn=eval_input)
         print('>>')
         print(train_results)
