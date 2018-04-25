@@ -7,44 +7,6 @@ def _init_activation(feature):
     return tf.nn.relu(feature)
 
 
-def init_models():
-    x = tf.placeholder(tf.float32, [None, INPUT_LAYER_SIZE], 'x')
-    y = tf.placeholder(tf.int32, [None], 'y')
-
-    hidden_layers = [
-        tf.layers.dense(
-            x, hidden_layer_size, activation=_init_activation, use_bias=True)
-    ]
-    for i in range(hidden_layer_number):
-        hidden_layers.append(
-            tf.layers.dense(
-                hidden_layers[-1],
-                hidden_layer_size,
-                activation=_init_activation,
-                use_bias=True))
-    output_layer = tf.layers.dense(
-        hidden_layers[-1], OUTPUT_LAYER_SIZE, use_bias=True)
-
-    loss = tf.losses.sparse_softmax_cross_entropy(y, output_layer)
-    # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-    # optimizer = tf.train.RMSPropOptimizer(learning_rate)
-    # optimizer = tf.train.MomentumOptimizer(learning_rate, 0.5)
-    optimizer = tf.train.AdamOptimizer(learning_rate * 0.01)
-    train_op = optimizer.minimize(loss)
-
-    pred = tf.argmax(output_layer, axis=1, output_type=tf.int32)
-    acc = tf.reduce_mean(tf.cast(tf.equal(pred, y), tf.float32))
-
-    return {
-        'x': x,
-        'y': y,
-        'loss': loss,
-        'train_op': train_op,
-        'acc': acc,
-        'pred': pred
-    }
-
-
 def fc_model_fn(features, labels, mode):
     """
         Model function for PA1. Fully Connected(FC) Neural Network.
@@ -55,19 +17,21 @@ def fc_model_fn(features, labels, mode):
 
     hidden_layers = [
         tf.layers.dense(
-            input_layer,
-            hidden_layer_size,
-            activation=_init_activation,
-            use_bias=True)
+            input_layer, hidden_layer_size, activation=_init_activation)
     ]
     for i in range(hidden_layer_number):
-        hidden_layers.append(
-            tf.layers.dense(
-                hidden_layers[-1],
-                hidden_layer_size,
-                activation=_init_activation,
-                use_bias=True))
-    output_layer = tf.layers.dense(hidden_layers[-1], OUTPUT_LAYER_SIZE)
+        dropout_layer = tf.layers.dropout(
+            inputs=hidden_layers[-1],
+            rate=DROPOUT_RATE,
+            training=(mode == tf.estimator.ModeKeys.TRAIN))
+        hidden_layer = tf.layers.dense(
+            dropout_layer, hidden_layer_size, activation=_init_activation)
+        hidden_layers.append(hidden_layer)
+    dropout_layer = tf.layers.dropout(
+        inputs=hidden_layers[-1],
+        rate=DROPOUT_RATE,
+        training=(mode == tf.estimator.ModeKeys.TRAIN))
+    output_layer = tf.layers.dense(dropout_layer, OUTPUT_LAYER_SIZE)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -93,7 +57,7 @@ def fc_model_fn(features, labels, mode):
         # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
         # optimizer = tf.train.RMSPropOptimizer(learning_rate)
         # optimizer = tf.train.MomentumOptimizer(learning_rate, 0.5)
-        optimizer = tf.train.AdamOptimizer(learning_rate * 0.01)
+        optimizer = tf.train.AdamOptimizer(learning_rate * 0.1)
 
         train_op = optimizer.minimize(
             loss=loss, global_step=tf.train.get_global_step())
