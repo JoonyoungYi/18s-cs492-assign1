@@ -2,15 +2,15 @@ IMAGE_SIZE = 28
 INPUT_LAYER_SIZE = IMAGE_SIZE * IMAGE_SIZE
 OUTPUT_LAYER_SIZE = 10
 
-hidden_layer_size = 800
+hidden_layer_size = 4000
 hidden_layer_number = 6
-MODEL_FOLDER_NAME = './models/pa1-{}'.format(hidden_layer_number + 1)
-DROPOUT_RATE = 0.1
-learning_rate = 0.01
+MODEL_FOLDER_NAME = './models/pa1-{}'
+DROPOUT_RATE = 0.5
+learning_rate = 1e-3
 
-NOISE_STD = 0.1
+NOISE_STD = 0.06
 TRAINING_DATA_NUMBER = 80000
-BATCH_SIZE = 400
+BATCH_SIZE = 2000
 assert TRAINING_DATA_NUMBER % BATCH_SIZE == 0
 BATCH_ITER_NUMBER = TRAINING_DATA_NUMBER // BATCH_SIZE
 EPOCH = 100

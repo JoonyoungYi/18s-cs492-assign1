@@ -10,12 +10,10 @@ import numpy as np
 from config import *
 from model import fc_model_fn
 
+# tf.logging.set_verbosity(tf.logging.INFO)
 tf.logging.set_verbosity(tf.logging.FATAL)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-if os.path.exists(MODEL_FOLDER_NAME):
-    shutil.rmtree(MODEL_FOLDER_NAME)
 
-pa1_dataset = None
 timestamp = None
 
 
@@ -57,18 +55,20 @@ def _augment_train_data(_matrix):
     matrix = _rotation_train_data(_matrix)
     matrix = np.concatenate((matrix, _flip_train_data(matrix)))
     return matrix
+    # return _matrix
 
 
-def _add_gaussian_noise(train_x, e):
+def _add_gaussian_noise(train_x):
     # idx = random.randint(0, train_x.shape[0] - 1)
     # __debug_save_image(train_x[idx, :], 'original')
-    batch_x = np.minimum(
-        np.ones(train_x.shape),
-        np.maximum(
-            np.zeros(train_x.shape),
-            np.add(train_x,
-                   np.random.normal(0, min(e * 0.05, 0.2),
-                                    train_x.shape)))).astype(np.float32)
+    # batch_x = np.minimum(
+    #     np.ones(train_x.shape),
+    #     np.maximum(
+    #         np.zeros(train_x.shape),
+    #         np.add(train_x, np.random.normal(
+    #             0, NOISE_STD, train_x.shape)))).astype(np.float32)
+    batch_x = np.add(train_x, np.random.normal(
+        0, NOISE_STD, train_x.shape)).astype(np.float32)
     # __debug_save_image(batch_x[idx, :], 'new')
     return batch_x
 
@@ -81,7 +81,9 @@ def _get_eval_set():
 
 
 def _get_last_time_msg():
-    return '(%5.1fsec)' % ((time.time() - timestamp))
+    delta = time.time() - timestamp
+    return '(%02d:%02d:%2d)' % (delta // 3600, (delta // 60) % 60,
+                                delta % 60)
 
 
 def _get_msg_from_result(result):
@@ -104,14 +106,19 @@ def _log(i, train_results, eval_results, final=False):
     print(msg)
 
 
-if __name__ == '__main__':
+def main(gpu_idx):
+    global timestamp
+
+    if os.path.exists(MODEL_FOLDER_NAME.format(gpu_idx)):
+        shutil.rmtree(MODEL_FOLDER_NAME.format(gpu_idx))
+
     # init dataset and models
     train_set = _augment_train_data(np.load('PA1-data/train.npy'))
     timestamp = time.time()
 
     # setting classifier
     classifier = tf.estimator.Estimator(
-        model_fn=fc_model_fn, model_dir=MODEL_FOLDER_NAME)
+        model_fn=fc_model_fn, model_dir=MODEL_FOLDER_NAME.format(gpu_idx))
 
     train_x = train_set[:, :INPUT_LAYER_SIZE]
     train_y = train_set[:, INPUT_LAYER_SIZE].astype(np.int32)
@@ -135,7 +142,7 @@ if __name__ == '__main__':
             # After 1 epoch. reinitilaize batch_x
             e = (i // BATCH_ITER_NUMBER)
             print('EPOCH', e + 1)
-            batch_x = _add_gaussian_noise(train_x, e)
+            batch_x = _add_gaussian_noise(train_x)
             # batch_x = train_x
             batch_input_fn = tf.estimator.inputs.numpy_input_fn(
                 x={"x": batch_x},
@@ -155,3 +162,9 @@ if __name__ == '__main__':
         if train_results['loss'] < EARLY_STOP_TRAIN_LOSS:
             print('EARLY STOP!')
             break
+
+
+if __name__ == '__main__':
+    gpu_idx = 1
+    with tf.device('/gpu:{}'.format(gpu_idx)):
+        main(gpu_idx)

@@ -3,10 +3,6 @@ import tensorflow as tf
 from config import *
 
 
-def _init_activation(feature):
-    return tf.nn.relu(feature)
-
-
 def fc_model_fn(features, labels, mode):
     """
         Model function for PA1. Fully Connected(FC) Neural Network.
@@ -14,23 +10,22 @@ def fc_model_fn(features, labels, mode):
     # Input Layer
     # I use 1 x 784 flat vector.
     input_layer = features["x"]
-
-    hidden_layers = [
-        tf.layers.dense(
-            input_layer, hidden_layer_size, activation=_init_activation)
-    ]
     for i in range(hidden_layer_number):
+        dense_layer = tf.layers.dense(
+            inputs=input_layer,
+            units=hidden_layer_size,
+            activation=None,
+            use_bias=False)
+        bn_layer = tf.layers.batch_normalization(
+            dense_layer,
+            momentum=0.9,
+            training=mode == tf.estimator.ModeKeys.TRAIN)
+        relu_layer = tf.nn.relu(bn_layer)
         dropout_layer = tf.layers.dropout(
-            inputs=hidden_layers[-1],
+            inputs=relu_layer,
             rate=DROPOUT_RATE,
             training=(mode == tf.estimator.ModeKeys.TRAIN))
-        hidden_layer = tf.layers.dense(
-            dropout_layer, hidden_layer_size, activation=_init_activation)
-        hidden_layers.append(hidden_layer)
-    dropout_layer = tf.layers.dropout(
-        inputs=hidden_layers[-1],
-        rate=DROPOUT_RATE,
-        training=(mode == tf.estimator.ModeKeys.TRAIN))
+        input_layer = dropout_layer
     output_layer = tf.layers.dense(dropout_layer, OUTPUT_LAYER_SIZE)
 
     predictions = {
@@ -54,13 +49,13 @@ def fc_model_fn(features, labels, mode):
 
     # Setting Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
-        # optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-        # optimizer = tf.train.RMSPropOptimizer(learning_rate)
-        # optimizer = tf.train.MomentumOptimizer(learning_rate, 0.5)
-        optimizer = tf.train.AdamOptimizer(learning_rate * 0.1)
+        optimizer = tf.train.AdamOptimizer(learning_rate)
 
-        train_op = optimizer.minimize(
-            loss=loss, global_step=tf.train.get_global_step())
+        # This two lines are for bm.
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_op = optimizer.minimize(
+                loss=loss, global_step=tf.train.get_global_step())
 
         return tf.estimator.EstimatorSpec(
             mode=mode,
