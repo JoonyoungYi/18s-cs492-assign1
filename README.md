@@ -1,12 +1,5 @@
-# Study Tensorflow
-* This is to practice tensorflow.
-
-## Forked From multiple sources.
-* This repository is mainly forked from [KAIST CS492C course(Introduction to Deep Learning)](https://github.com/hyunwooj/KAIST-CS492C-Spring2018).
-  * KAIST CS492C deep learning course tensorflow session.
-
-* Also, I used this [repository](https://github.com/golbin/TensorFlow-Tutorials)
-
+# 18s-cs492-assign1
+* 2018년 봄 KAIST CS492C 딥러닝 수업 Assignment1
 
 # Environment
 * Python 3.5 and TensorFlow 1.4
@@ -26,5 +19,5 @@ tensorflow-gpu==1.4
 # Run
 ```
     . .venv/bin/activate
-    python launcher.py
+    python run.py
 ```
