@@ -3,6 +3,28 @@ import tensorflow as tf
 from config import *
 
 
+# def _maxout_layer(x, k=3, idx=0):
+#     with tf.device('/gpu:2'):
+#         with tf.variable_scope('maxout' + str(idx)):
+#             outputs = []
+#             for i in range(k):
+#                 name = 'w%d_%d' % (idx, i)
+#                 w = tf.get_variable(
+#                     name,
+#                     x.get_shape()[-1],
+#                     initializer=tf.constant_initializer(1.0 * (i - k / 2)))
+#                 name = 'b%d_%d' % (idx, i)
+#                 b = tf.get_variable(
+#                     name,
+#                     x.get_shape()[-1],
+#                     initializer=tf.constant_initializer(i - k / 2))
+#                 output = x * w + b
+#                 outputs.append(output)
+#
+#             maxout_layer = tf.reduce_max(outputs, 0)
+#             return maxout_layer
+
+
 def fc_model_fn(features, labels, mode):
     """
         Model function for PA1. Fully Connected(FC) Neural Network.
@@ -20,9 +42,11 @@ def fc_model_fn(features, labels, mode):
             dense_layer,
             momentum=0.9,
             training=mode == tf.estimator.ModeKeys.TRAIN)
-        relu_layer = tf.nn.relu(bn_layer)
+        activation_layer = tf.nn.relu(bn_layer)
+        # activation_layer = tf.nn.leaky_relu(bn_layer, alpha=0.1)
+        # activation_layer = _maxout_layer(bn_layer, idx=i)
         dropout_layer = tf.layers.dropout(
-            inputs=relu_layer,
+            inputs=activation_layer,
             rate=DROPOUT_RATE,
             training=(mode == tf.estimator.ModeKeys.TRAIN))
         input_layer = dropout_layer

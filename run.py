@@ -44,16 +44,26 @@ def _rotation_train_data(_matrix):
     return matrix
 
 
+def _get_flipped_matrix(matrix):
+    # idx = random.randint(0, matrix.shape[0] - 1)
+    # __debug_save_image(matrix[idx, :INPUT_LAYER_SIZE], 'original')
+    i_matrix = np.transpose(matrix[:, :INPUT_LAYER_SIZE])
+    i_matrix = i_matrix.reshape(IMAGE_SIZE, IMAGE_SIZE, -1)
+    i_matrix = np.flip(i_matrix, axis=1)
+    i_matrix = i_matrix.reshape(INPUT_LAYER_SIZE, -1)
+    i_matrix = np.transpose(i_matrix)
+    f_matrix = np.concatenate((i_matrix, matrix[:, INPUT_LAYER_SIZE:]), axis=1)
+    # __debug_save_image(f_matrix[idx, :INPUT_LAYER_SIZE], 'new')
+    return f_matrix
+
+
 def _flip_train_data(matrix):
-    return np.concatenate(
-        (np.flip(matrix[:, :INPUT_LAYER_SIZE], axis=1),
-         matrix[:, INPUT_LAYER_SIZE:]),
-        axis=1)
+    return np.concatenate((matrix, _get_flipped_matrix(matrix[:, :])))
 
 
 def _augment_train_data(_matrix):
     matrix = _rotation_train_data(_matrix)
-    matrix = np.concatenate((matrix, _flip_train_data(matrix)))
+    matrix = _flip_train_data(matrix)
     return matrix
     # return _matrix
 
@@ -82,8 +92,7 @@ def _get_eval_set():
 
 def _get_last_time_msg():
     delta = time.time() - timestamp
-    return '(%02d:%02d:%2d)' % (delta // 3600, (delta // 60) % 60,
-                                delta % 60)
+    return '(%02d:%02d:%02d)' % (delta // 3600, (delta // 60) % 60, delta % 60)
 
 
 def _get_msg_from_result(result):
