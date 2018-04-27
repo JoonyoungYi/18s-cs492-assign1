@@ -108,7 +108,10 @@ logs/
 MNIST-data/
 PA1-data/
 model/
-20110727.npy
 PA1-model/
 PA1-model-old/
 models/
+data/
+20183453_network_3.npy
+20183453_network_5.npy
+20183453_network_7.npy

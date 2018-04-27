@@ -2,7 +2,6 @@ import tensorflow as tf
 
 from config import *
 
-
 # def _maxout_layer(x, k=3, idx=0):
 #     with tf.device('/gpu:2'):
 #         with tf.variable_scope('maxout' + str(idx)):
@@ -40,7 +39,7 @@ def fc_model_fn(features, labels, mode):
             use_bias=False)
         bn_layer = tf.layers.batch_normalization(
             dense_layer,
-            momentum=0.9,
+            momentum=BN_MOMENTUM,
             training=mode == tf.estimator.ModeKeys.TRAIN)
         activation_layer = tf.nn.relu(bn_layer)
         # activation_layer = tf.nn.leaky_relu(bn_layer, alpha=0.1)
